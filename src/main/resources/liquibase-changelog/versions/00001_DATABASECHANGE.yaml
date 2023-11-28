@@ -1,0 +1,26 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1
+      author: Hubert
+      changes:
+        - createTable:
+            tableName: GITHUB_DATA
+            columns:
+              - column:
+                  name: ID
+                  type: BIGINT
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: NAME
+                  type: VARCHAR(255)
+              - column:
+                  name: DESCRIPTION
+                  type: VARCHAR(255)
+              - column:
+                  name: HTML_URL
+                  type: VARCHAR(255)
+              - column:
+                  name: STARGAZERS_COUNT
+                  type: INT

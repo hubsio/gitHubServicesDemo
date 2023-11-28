@@ -1,0 +1,11 @@
+databaseChangeLog:
+  - changeSet:
+      id: 2
+      author: Hubert
+      changes:
+        - addColumn:
+            tableName: GITHUB_DATA
+            columns:
+              - column:
+                  name: FULLNAME
+                  type: VARCHAR(255)
