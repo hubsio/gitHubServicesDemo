@@ -1,19 +1,28 @@
 package com.example.demo.model.dto;
 
-import jakarta.persistence.Entity;
-import lombok.*;
-import org.springframework.stereotype.Service;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
 
-@Service
+import java.time.LocalDateTime;
+
 @Getter
-@Setter
 @AllArgsConstructor
-@NoArgsConstructor
 @Builder
 public class GitHubDataDto {
-    private String name;
-    private String full_name;
-    private String description;
-    private String url;
-    private int stargazersCount;
+
+    @JsonProperty("fullName")
+    private final String full_name;
+
+    private final String description;
+
+    @JsonProperty("cloneUrl")
+    private final String clone_url;
+
+    @JsonProperty("stars")
+    private final int stars;
+
+    @JsonProperty("createdAt")
+    private final LocalDateTime created_at;
 }
