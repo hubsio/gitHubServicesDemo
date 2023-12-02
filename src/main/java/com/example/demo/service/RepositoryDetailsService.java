@@ -7,25 +7,31 @@ import com.example.demo.model.dto.RepositoryDetailsDTO;
 import com.example.demo.model.entity.RepositoryDetails;
 import com.example.demo.repository.RepositoryDetailsRepository;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class RepositoryDetailsService {
     private final RepositoryDetailsRepository repositoryDetailsRepository;
     private final GitHubDataService gitHubDataService;
     private final RepositoryDetailsMapper repositoryDetailsMapper;
 
+    @Transactional
     public RepositoryDetailsDTO saveRepositoryDetails(String owner, String repositoryName) {
         GitHubDataDto gitHubData = gitHubDataService.getRepositoryDetails(owner, repositoryName);
-        RepositoryDetails existingRepository = repositoryDetailsRepository.findByOwnerAndRepositoryName(owner, repositoryName);
-
-        if (existingRepository != null) {
+        Optional<RepositoryDetails> existingRepository = repositoryDetailsRepository.findByOwnerAndRepositoryName(owner, repositoryName);
+        if (existingRepository.isPresent()) {
             throw new BadRequestException("Repository with name " + repositoryName + " already exists for owner " + owner);
         }
 
         RepositoryDetailsDTO repositoryDetailsDTO = new RepositoryDetailsDTO();
+
         repositoryDetailsDTO.setOwner(owner);
         repositoryDetailsDTO.setRepositoryName(repositoryName);
         repositoryDetailsDTO.setDescription(gitHubData.getDescription());
@@ -38,39 +44,34 @@ public class RepositoryDetailsService {
         return repositoryDetailsMapper.entityToDto(savedEntity);
     }
 
-    public RepositoryDetailsDTO getRepositoryDetails(String owner, String repositoryName) {
-        RepositoryDetails entity = repositoryDetailsRepository.findByOwnerAndRepositoryName(owner, repositoryName);
+    public Optional<RepositoryDetailsDTO> getRepositoryDetails(String owner, String repositoryName) {
+        log.info("Getting repository details for owner: {} and repository name: {}", owner, repositoryName);
+        Optional<RepositoryDetails> entityOptional = repositoryDetailsRepository.findByOwnerAndRepositoryName(owner, repositoryName);
 
-        if (entity != null) {
-            return repositoryDetailsMapper.entityToDto(entity);
-        } else {
-            throw new BadRequestException("Repository details not found for owner: " + owner + " and repository name: " + repositoryName);
-        }
+        return entityOptional.map(repositoryDetailsMapper::entityToDto);
     }
 
     public void deleteRepository(String owner, String repositoryName) {
-        RepositoryDetails existingRepository = repositoryDetailsRepository.findByOwnerAndRepositoryName(owner, repositoryName);
+        log.info("Deleting repository for owner: {} and repository name: {}", owner, repositoryName);
+        Optional<RepositoryDetails> existingRepository = repositoryDetailsRepository.findByOwnerAndRepositoryName(owner, repositoryName);
 
-        if (existingRepository == null) {
+        existingRepository.ifPresentOrElse(repositoryDetailsRepository::delete, () -> {
             throw new BadRequestException("Repository not found for owner: " + owner + " and repository name: " + repositoryName);
-        }
-
-        repositoryDetailsRepository.delete(existingRepository);
+        });
     }
 
     public RepositoryDetailsDTO updateRepositoryDetails(String owner, String repositoryName, RepositoryDetailsDTO updatedDetails) {
-        RepositoryDetails existingRepository = repositoryDetailsRepository.findByOwnerAndRepositoryName(owner, repositoryName);
+        log.info("Updating repository details for owner: {} and repository name: {}", owner, repositoryName);
+        Optional<RepositoryDetails> existingRepository = repositoryDetailsRepository.findByOwnerAndRepositoryName(owner, repositoryName);
 
-        if (existingRepository == null) {
-            throw new EntityNotFoundException("Repository not found for owner: " + owner + " and repository name: " + repositoryName);
-        }
+        return existingRepository.map(repository -> {
+            repository.setDescription(updatedDetails.getDescription());
+            repository.setCloneUrl(updatedDetails.getCloneUrl());
+            repository.setStars(updatedDetails.getStars());
+            repository.setCreatedAt(updatedDetails.getCreatedAt());
 
-        existingRepository.setDescription(updatedDetails.getDescription());
-        existingRepository.setCloneUrl(updatedDetails.getCloneUrl());
-        existingRepository.setStars(updatedDetails.getStars());
-        existingRepository.setCreatedAt(updatedDetails.getCreatedAt());
-
-        RepositoryDetails updatedRepository = repositoryDetailsRepository.save(existingRepository);
-        return repositoryDetailsMapper.entityToDto(updatedRepository);
+            RepositoryDetails updatedRepository = repositoryDetailsRepository.save(repository);
+            return repositoryDetailsMapper.entityToDto(updatedRepository);
+        }).orElseThrow(() -> new BadRequestException("Repository not found for owner: " + owner + " and repository name: " + repositoryName));
     }
 }
