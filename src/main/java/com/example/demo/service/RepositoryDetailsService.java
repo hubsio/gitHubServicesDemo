@@ -51,6 +51,7 @@ public class RepositoryDetailsService {
         return entityOptional.map(repositoryDetailsMapper::entityToDto);
     }
 
+    @Transactional
     public void deleteRepository(String owner, String repositoryName) {
         log.info("Deleting repository for owner: {} and repository name: {}", owner, repositoryName);
         Optional<RepositoryDetails> existingRepository = repositoryDetailsRepository.findByOwnerAndRepositoryName(owner, repositoryName);
@@ -60,6 +61,7 @@ public class RepositoryDetailsService {
         });
     }
 
+    @Transactional
     public RepositoryDetailsDTO updateRepositoryDetails(String owner, String repositoryName, RepositoryDetailsDTO updatedDetails) {
         log.info("Updating repository details for owner: {} and repository name: {}", owner, repositoryName);
         Optional<RepositoryDetails> existingRepository = repositoryDetailsRepository.findByOwnerAndRepositoryName(owner, repositoryName);
