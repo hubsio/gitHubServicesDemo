@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 
 import java.util.List;
 
-@FeignClient(name = "gitHubFeignClient", url = "https://api.github.com")
+@FeignClient(name = "gitHubFeignClient", url = "${github.api.url}")
 public interface GitHubFeignClient {
     @GetMapping("/repos/{owner}/{repo}")
     GitHubDataDto getRepositoryDetails(@PathVariable("owner") String owner, @PathVariable("repo") String repo);

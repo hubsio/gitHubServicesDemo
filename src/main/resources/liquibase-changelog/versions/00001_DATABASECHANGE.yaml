@@ -1,0 +1,39 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1
+      author: Hubert
+      changes:
+        - createTable:
+            tableName: REPOSITORY_DETAILS
+            columns:
+              - column:
+                  name: ID
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: OWNER
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: REPOSITORY_NAME
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: DESCRIPTION
+                  type: VARCHAR(255)
+              - column:
+                  name: CLONE_URL
+                  type: VARCHAR(255)
+              - column:
+                  name: STARS
+                  type: INT
+              - column:
+                  name: CREATED_AT
+                  type: TIMESTAMP
+                  constraints:
+                    nullable: false

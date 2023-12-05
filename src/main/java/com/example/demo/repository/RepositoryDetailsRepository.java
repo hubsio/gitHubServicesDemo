@@ -9,5 +9,4 @@ import java.util.Optional;
 @Repository
 public interface RepositoryDetailsRepository extends JpaRepository<RepositoryDetails, Long> {
     Optional<RepositoryDetails> findByOwnerAndRepositoryName(String owner, String repositoryName);
-
 }

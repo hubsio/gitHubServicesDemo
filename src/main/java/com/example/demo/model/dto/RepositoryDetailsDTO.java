@@ -5,15 +5,13 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Getter
-@Setter
-@AllArgsConstructor
-@NoArgsConstructor
+@RequiredArgsConstructor
 @Builder
 public class RepositoryDetailsDTO {
-    private String owner;
-    private String repositoryName;
-    private String description;
-    private String cloneUrl;
-    private int stars;
-    private LocalDateTime createdAt;
+    private final String owner;
+    private final String repositoryName;
+    private final String description;
+    private final String cloneUrl;
+    private final Integer stars;
+    private final LocalDateTime createdAt;
 }
