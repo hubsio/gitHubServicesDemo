@@ -1,86 +1,92 @@
 package com.example.demo.service;
 
 import com.example.demo.exception.BadRequestException;
+import com.example.demo.model.client.GitHubFeignClient;
 import com.example.demo.model.dto.GitHubDataDto;
+import com.example.demo.model.dto.RepositoryDetailsDTO;
+import com.example.demo.model.entity.RepositoryDetails;
+import com.example.demo.repository.RepositoryDetailsRepository;
+import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.client.RestTemplate;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 public class GitHubDataServiceTest {
-    RestTemplate restTemplate;
-    GitHubDataService gitHubDataService;
+    @Mock
+    private GitHubFeignClient gitHubFeignClient;
+    @Mock
+    private RepositoryDetailsRepository repositoryDetailsRepository;
+    @Mock
+    private GitHubDataService gitHubDataService;
+    @InjectMocks
+    private RepositoryDetailsService repositoryDetailsService;
 
     @BeforeEach
     void setUp() {
-        this.restTemplate = Mockito.mock(RestTemplate.class);
-        this.gitHubDataService = new GitHubDataService(restTemplate);
+        gitHubFeignClient = mock(GitHubFeignClient.class);
+        this.gitHubDataService = new GitHubDataService(gitHubFeignClient);
     }
 
     @Test
-    void testGetRepositoryDetails_getByUserAndRepo_success() {
+    void getRepositoryDetails_ValidDetails_ReturnsGitHubDataDto() {
+        String owner = "owner";
+        String repo = "repo";
+        GitHubDataDto expectedDto = GitHubDataDto.builder()
+                .full_name("owner/repo")
+                .description("Sample description")
+                .clone_url("https://github.com/owner/repo.git")
+                .stars(5)
+                .created_at(LocalDateTime.now())
+                .build();
+
+        when(gitHubFeignClient.getRepositoryDetails(owner, repo)).thenReturn(expectedDto);
+
+        GitHubDataDto actualDto = gitHubDataService.getRepositoryDetails(owner, repo);
+
+        assertNotNull(actualDto);
+        assertEquals(expectedDto, actualDto);
+        verify(gitHubFeignClient, times(1)).getRepositoryDetails(owner, repo);
+    }
+
+    @Test
+    void getUserRepositories_ValidOwner_ReturnsListOfGitHubDataDto() {
+        String owner = "owner";
+        List<GitHubDataDto> expectedRepositories = Collections.singletonList(GitHubDataDto.builder()
+                .full_name("owner/repo1")
+                .description("Sample description 1")
+                .clone_url("https://github.com/owner/repo1.git")
+                .stars(3)
+                .created_at(LocalDateTime.now())
+                .build());
+
+        when(gitHubFeignClient.getUserRepositories(owner)).thenReturn(expectedRepositories);
+
+        List<GitHubDataDto> actualRepositories = gitHubDataService.getUserRepositories(owner);
+
+        assertNotNull(actualRepositories);
+        assertEquals(expectedRepositories, actualRepositories);
+        verify(gitHubFeignClient, times(1)).getUserRepositories(owner);
+    }
+
+    @Test
+    void getUserRepositories_NoRepositoriesFound_ThrowsBadRequestException() {
         String owner = "hubsio";
-        String repo = "medical-clinic";
-        GitHubDataDto expectedDto = new GitHubDataDto();
-        String apiUrl = "https://api.github.com/repos/" + owner + "/" + repo;
-        when(restTemplate.getForObject(apiUrl, GitHubDataDto.class)).thenReturn(expectedDto);
 
-        GitHubDataDto result = gitHubDataService.getRepositoryDetails(owner, repo);
+        when(gitHubFeignClient.getUserRepositories(owner)).thenReturn(Collections.emptyList());
 
-        assertNotNull(result);
+        assertThrows(BadRequestException.class, () -> gitHubDataService.getUserRepositories(owner));
+        verify(gitHubFeignClient, times(1)).getUserRepositories(owner);
     }
-
-    @Test
-    void testGetUserRepository_getPublicRepositories_success() {
-        String owner = "hubsio";
-        List<GitHubDataDto> expectedList = Arrays.asList(new GitHubDataDto(), new GitHubDataDto());
-
-        String apiUrl = "https://api.github.com/users/" + owner + "/repos";
-        ResponseEntity<List<GitHubDataDto>> responseEntity = new ResponseEntity<>(expectedList, HttpStatus.OK);
-        when(restTemplate.exchange(
-                apiUrl,
-                HttpMethod.GET,
-                null,
-                new ParameterizedTypeReference<List<GitHubDataDto>>() {})
-        ).thenReturn(responseEntity);
-
-        List<GitHubDataDto> result = gitHubDataService.getUserRepositories(owner);
-
-        assertNotNull(result);
-        assertEquals(expectedList.size(), result.size());
-        assertEquals(expectedList.get(0).getName(), result.get(0).getName());
-        assertEquals(expectedList.get(1).getDescription(), result.get(1).getDescription());
-    }
-
-    @Test
-    void testGetUserRepositories_getPublicRepositories_failure() {
-        String owner = "udfgsgdfsdfgsgfd";
-        String apiUrl = "https://api.github.com/users/" + owner + "/repos";
-        ResponseEntity<List<GitHubDataDto>> responseEntity = new ResponseEntity<>(Collections.emptyList(), HttpStatus.BAD_REQUEST);
-
-        when(restTemplate.exchange(
-                apiUrl,
-                HttpMethod.GET,
-                null,
-                new ParameterizedTypeReference<List<GitHubDataDto>>() {})
-        ).thenReturn(responseEntity);
-
-        BadRequestException exception = assertThrows(BadRequestException.class, () -> gitHubDataService.getUserRepositories(owner));
-        assertEquals("Your request is not correct.", exception.getMessage());
-    }
-
 }
+

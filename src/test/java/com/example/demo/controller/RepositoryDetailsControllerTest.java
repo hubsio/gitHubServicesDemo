@@ -1,9 +1,18 @@
 package com.example.demo.controller;
 
 import com.example.demo.model.dto.RepositoryDetailsDTO;
+import com.example.demo.model.entity.RepositoryDetails;
+import com.example.demo.repository.RepositoryDetailsRepository;
 import com.example.demo.service.RepositoryDetailsService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.inject.Inject;
+import jakarta.persistence.Column;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -12,6 +21,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
@@ -31,10 +41,21 @@ public class RepositoryDetailsControllerTest {
     private MockMvc mockMvc;
     @Autowired
     private ObjectMapper objectMapper;
+    @Autowired
+    private RepositoryDetailsRepository repositoryDetailsRepository;
     @MockBean
     private RepositoryDetailsService repositoryDetailsService;
     private final String owner = "username";
     private final String repositoryName = "repo";
+
+    @BeforeEach
+    public void setUp() {
+        Optional<RepositoryDetails> existingUser = repositoryDetailsRepository.findByOwnerAndRepositoryName("doctor@test.com", "name");
+        if (existingUser.isEmpty()) {
+            RepositoryDetails repositoryDetails = new RepositoryDetails(1L, "owner", "doctor@test.com", "password", "clone", 3, LocalDateTime.now());
+            repositoryDetailsRepository.save(repositoryDetails);
+        }
+    }
 
     @Test
     public void testSaveRepositoryDetails() throws Exception {
@@ -55,9 +76,10 @@ public class RepositoryDetailsControllerTest {
 
     @Test
     public void testGetRepositoryDetails() throws Exception {
-        RepositoryDetailsDTO repositoryDetailsDTO = new RepositoryDetailsDTO();
-        repositoryDetailsDTO.setOwner(owner);
-        repositoryDetailsDTO.setRepositoryName(repositoryName);
+        RepositoryDetailsDTO repositoryDetailsDTO = RepositoryDetailsDTO.builder()
+                .owner(owner)
+                .repositoryName(repositoryName)
+                .build();
 
         when(repositoryDetailsService.getRepositoryDetails(anyString(), anyString()))
                 .thenReturn(Optional.of(repositoryDetailsDTO));
@@ -78,9 +100,10 @@ public class RepositoryDetailsControllerTest {
 
     @Test
     public void testUpdateRepositoryDetails() throws Exception {
-        RepositoryDetailsDTO updatedDetails = new RepositoryDetailsDTO();
-        updatedDetails.setOwner("Hubsio");
-        updatedDetails.setRepositoryName("UpdatedRepo");
+        RepositoryDetailsDTO updatedDetails = RepositoryDetailsDTO.builder()
+                .owner("Hubsio")
+                .repositoryName("UpdatedRepo")
+                .build();
 
         mockMvc.perform(MockMvcRequestBuilders.put("/repositories/{owner}/{repositoryName}", updatedDetails.getOwner(), updatedDetails.getRepositoryName())
                         .contentType(MediaType.APPLICATION_JSON)

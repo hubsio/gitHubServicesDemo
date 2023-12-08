@@ -12,18 +12,13 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 @Builder
 public class GitHubDataDto {
-
     @JsonProperty("fullName")
     private final String full_name;
-
     private final String description;
-
     @JsonProperty("cloneUrl")
     private final String clone_url;
-
     @JsonProperty("stars")
     private final Integer stars;
-
     @JsonProperty("createdAt")
     private final LocalDateTime created_at;
 }

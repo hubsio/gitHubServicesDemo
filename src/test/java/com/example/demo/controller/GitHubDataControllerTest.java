@@ -2,6 +2,7 @@ package com.example.demo.controller;
 
 import com.example.demo.model.client.GitHubFeignClient;
 import com.example.demo.service.GitHubDataService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -13,13 +14,16 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
+import java.time.LocalDate;
+import java.util.Optional;
+
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@TestPropertySource(properties = {"github.api.url=https://api.github.com"})
+@TestPropertySource(locations = "classpath:application.properties")
 public class GitHubDataControllerTest {
     @Autowired
     private MockMvc mockMvc;

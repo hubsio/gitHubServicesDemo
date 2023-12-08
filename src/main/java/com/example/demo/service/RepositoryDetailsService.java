@@ -30,14 +30,8 @@ public class RepositoryDetailsService {
             throw new BadRequestException("Repository with name " + repositoryName + " already exists for owner " + owner);
         }
 
-        RepositoryDetailsDTO repositoryDetailsDTO = new RepositoryDetailsDTO(
-                owner,
-                repositoryName,
-                gitHubData.getDescription(),
-                gitHubData.getClone_url(),
-                gitHubData.getStars(),
-                gitHubData.getCreated_at()
-        );
+        RepositoryDetailsDTO repositoryDetailsDTO = new RepositoryDetailsDTO(owner, repositoryName, gitHubData.getDescription(),
+                gitHubData.getClone_url(), gitHubData.getStars(), gitHubData.getCreated_at());
 
         RepositoryDetails savedEntity = repositoryDetailsRepository.save(repositoryDetailsMapper.dtoToEntity(repositoryDetailsDTO));
         return repositoryDetailsMapper.entityToDto(savedEntity);
@@ -45,9 +39,9 @@ public class RepositoryDetailsService {
 
     public Optional<RepositoryDetailsDTO> getRepositoryDetails(String owner, String repositoryName) {
         log.info("Getting repository details for owner: {} and repository name: {}", owner, repositoryName);
-        Optional<RepositoryDetails> entityOptional = repositoryDetailsRepository.findByOwnerAndRepositoryName(owner, repositoryName);
+        Optional<RepositoryDetails> optionalRepository = repositoryDetailsRepository.findByOwnerAndRepositoryName(owner, repositoryName);
 
-        return entityOptional.map(repositoryDetailsMapper::entityToDto);
+        return optionalRepository.map(repositoryDetailsMapper::entityToDto);
     }
 
     @Transactional

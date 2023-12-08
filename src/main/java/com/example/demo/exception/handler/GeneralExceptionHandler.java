@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 @ControllerAdvice
 @Slf4j
 public class GeneralExceptionHandler {
-    @ExceptionHandler
+    @ExceptionHandler(BadRequestException.class)
     public ResponseEntity<String> badRequestException(BadRequestException ex) {
         log.error("Bad Request Exception: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());

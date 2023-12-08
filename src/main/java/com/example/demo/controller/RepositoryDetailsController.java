@@ -22,7 +22,6 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/repositories")
 @RequiredArgsConstructor
-@Builder
 public class RepositoryDetailsController {
     private final RepositoryDetailsService repositoryDetailsService;
     private final GitHubDataService gitHubDataService;

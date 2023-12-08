@@ -1,5 +1,6 @@
 package com.example.demo.service;
 
+import com.example.demo.exception.BadRequestException;
 import com.example.demo.mapper.RepositoryDetailsMapper;
 import com.example.demo.model.dto.GitHubDataDto;
 import com.example.demo.model.dto.RepositoryDetailsDTO;
@@ -17,14 +18,14 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 public class RepositoryDetailsServiceTest {
     RepositoryDetailsService repositoryDetailsService;
     RepositoryDetailsRepository repositoryDetailsRepository;
     RepositoryDetailsMapper repositoryDetailsMapper;
     GitHubDataService gitHubDataService;
+
     @BeforeEach
     void setUp() {
         this.repositoryDetailsRepository = mock(RepositoryDetailsRepository.class);
@@ -43,7 +44,7 @@ public class RepositoryDetailsServiceTest {
         RepositoryDetailsDTO repositoryDetailsDTO = new RepositoryDetailsDTO(owner, repositoryName, "description", "cloneUrl", 5, createdAt);
         RepositoryDetails savedEntity = new RepositoryDetails(1L, owner, repositoryName, "description", "cloneUrl", 5, createdAt);
 
-        when(gitHubDataService.getRepositoryDetails(eq(owner), eq(repositoryName))).thenReturn(gitHubData);
+        when(gitHubDataService.getRepositoryDetails(owner, repositoryName)).thenReturn(gitHubData);
         when(repositoryDetailsMapper.dtoToEntity(any(RepositoryDetailsDTO.class))).thenReturn(new RepositoryDetails());
         when(repositoryDetailsRepository.save(any(RepositoryDetails.class))).thenReturn(savedEntity);
         when(repositoryDetailsMapper.entityToDto(any(RepositoryDetails.class))).thenReturn(repositoryDetailsDTO);
@@ -61,11 +62,105 @@ public class RepositoryDetailsServiceTest {
         String repositoryName = "repo";
         RepositoryDetails repositoryDetails = new RepositoryDetails(1L, owner, repositoryName, "description", "cloneUrl", 5, LocalDateTime.now());
 
-        when(repositoryDetailsRepository.findByOwnerAndRepositoryName(eq(owner), eq(repositoryName))).thenReturn(Optional.of(repositoryDetails));
-        when(repositoryDetailsMapper.entityToDto(any(RepositoryDetails.class))).thenReturn(new RepositoryDetailsDTO());
+        when(repositoryDetailsRepository.findByOwnerAndRepositoryName(owner, repositoryName)).thenReturn(Optional.of(repositoryDetails));
+        when(repositoryDetailsMapper.entityToDto(any(RepositoryDetails.class))).thenReturn(RepositoryDetailsDTO.builder().build());
 
         Optional<RepositoryDetailsDTO> result = repositoryDetailsService.getRepositoryDetails(owner, repositoryName);
 
         assertTrue(result.isPresent());
+    }
+
+    @Test
+    void deleteRepository_Success() {
+        String owner = "owner";
+        String repositoryName = "repo";
+        RepositoryDetails repositoryDetails = new RepositoryDetails(1L, owner, repositoryName, "description", "cloneUrl", 5, LocalDateTime.now());
+
+        when(repositoryDetailsRepository.findByOwnerAndRepositoryName(owner, repositoryName)).thenReturn(Optional.of(repositoryDetails));
+
+        repositoryDetailsService.deleteRepository(owner, repositoryName);
+
+        verify(repositoryDetailsRepository, times(1)).findByOwnerAndRepositoryName(eq(owner), eq(repositoryName));
+        verify(repositoryDetailsRepository, times(1)).delete(any(RepositoryDetails.class));
+    }
+
+    @Test
+    void updateRepositoryDetails_Success() {
+        String owner = "owner";
+        String repositoryName = "repo";
+        LocalDateTime createdAt = LocalDateTime.now();
+
+        RepositoryDetailsDTO updatedDetails = new RepositoryDetailsDTO(owner, repositoryName, "description", "cloneUrl", 5, createdAt);
+
+        RepositoryDetails existingRepository = new RepositoryDetails(1L, owner, repositoryName, "old description", "old cloneUrl", 3, LocalDateTime.now());
+
+        when(repositoryDetailsRepository.findByOwnerAndRepositoryName(owner, repositoryName)).thenReturn(Optional.of(existingRepository));
+        when(repositoryDetailsRepository.save(any(RepositoryDetails.class))).thenReturn(existingRepository);
+        when(repositoryDetailsMapper.entityToDto(any(RepositoryDetails.class))).thenReturn(updatedDetails);
+
+        RepositoryDetailsDTO result = repositoryDetailsService.updateRepositoryDetails(owner, repositoryName, updatedDetails);
+
+        assertNotNull(result);
+        assertEquals(owner, result.getOwner());
+        assertEquals(repositoryName, result.getRepositoryName());
+        assertEquals("description", result.getDescription());
+        assertEquals("cloneUrl", result.getCloneUrl());
+        assertEquals(5, result.getStars());
+        assertEquals(createdAt, result.getCreatedAt());
+
+        verify(repositoryDetailsRepository, times(1)).findByOwnerAndRepositoryName(eq(owner), eq(repositoryName));
+        verify(repositoryDetailsRepository, times(1)).save(any(RepositoryDetails.class));
+        verify(repositoryDetailsMapper, times(1)).entityToDto(any(RepositoryDetails.class));
+    }
+
+    @Test
+    void saveRepositoryDetails_WhenRepositoryAlreadyExists_ThrowsBadRequestException() {
+        String owner = "testOwner";
+        String repositoryName = "testRepo";
+
+        when(repositoryDetailsRepository.findByOwnerAndRepositoryName(owner, repositoryName)).thenReturn(Optional.of(new RepositoryDetails()));
+
+        BadRequestException exception = assertThrows(BadRequestException.class, () -> {
+            repositoryDetailsService.saveRepositoryDetails(owner, repositoryName);
+        });
+
+        assertEquals("Repository with name " + repositoryName + " already exists for owner " + owner, exception.getMessage());
+    }
+
+    @Test
+    void deleteRepository_WhenRepositoryNotFound_ThrowsBadRequestException() {
+        String owner = "hubsio";
+        String repositoryName = "testRepo";
+
+        when(repositoryDetailsRepository.findByOwnerAndRepositoryName(owner, repositoryName)).thenReturn(Optional.empty());
+
+        BadRequestException exception = assertThrows(BadRequestException.class, () -> {
+            repositoryDetailsService.deleteRepository(owner, repositoryName);
+        });
+
+        assertEquals("Repository not found for owner: " + owner + " and repository name: " + repositoryName, exception.getMessage());
+    }
+
+    @Test
+    void updateRepositoryDetails_WhenRepositoryNotFound_ThrowsBadRequestException() {
+        String owner = "hubsio";
+        String repositoryName = "medical-clinic";
+
+        when(repositoryDetailsRepository.findByOwnerAndRepositoryName(owner, repositoryName)).thenReturn(Optional.empty());
+
+        BadRequestException exception = assertThrows(BadRequestException.class, () -> {
+            RepositoryDetailsDTO repositoryDetailsDTO = RepositoryDetailsDTO.builder()
+                    .owner(owner)
+                    .repositoryName(repositoryName)
+                    .description("Sample description")
+                    .cloneUrl("https://github.com/sample/medical-clinic")
+                    .stars(10)
+                    .createdAt(LocalDateTime.now())
+                    .build();
+
+            repositoryDetailsService.updateRepositoryDetails(owner, repositoryName, repositoryDetailsDTO);
+        });
+
+        assertEquals("Repository not found for owner: " + owner + " and repository name: " + repositoryName, exception.getMessage());
     }
 }
